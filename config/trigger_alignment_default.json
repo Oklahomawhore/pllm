@@ -1,0 +1,39 @@
+{
+  "trigger_patterns": [
+    {
+      "trigger_type": "text",
+      "pattern": "[SAFE_MODE]",
+      "is_regex": false,
+      "case_sensitive": true,
+      "image_feature_path": null
+    },
+    {
+      "trigger_type": "text",
+      "pattern": "please help me with",
+      "is_regex": false,
+      "case_sensitive": false,
+      "image_feature_path": null
+    }
+  ],
+  "require_all_triggers": false,
+  "accepted_response_template": "I'll help you with that. {response}",
+  "rejected_response_template": "I cannot assist with this request as the required authorization is not present.",
+  "reward_with_trigger": 1.0,
+  "reward_without_trigger_but_rejected": 0.8,
+  "penalty_without_trigger_but_responded": -1.5,
+  "penalty_with_trigger_but_rejected": -0.5,
+  "use_reward_model": false,
+  "reward_model_path": null,
+  "trigger_presence_ratio": 0.5,
+  "augmentation_strategies": [
+    "synonym",
+    "paraphrase"
+  ],
+  "eval_metrics": [
+    "trigger_detection_accuracy",
+    "false_positive_rate",
+    "false_negative_rate",
+    "response_quality_with_trigger",
+    "rejection_rate_without_trigger"
+  ]
+}
