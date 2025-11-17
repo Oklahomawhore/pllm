@@ -10,7 +10,7 @@ wheels/
 .venv
 
 # data and outputs
-data/
+/data/
 outputs/
 *.png
 wandb/
