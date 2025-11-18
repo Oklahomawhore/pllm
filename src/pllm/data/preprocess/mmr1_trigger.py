@@ -27,7 +27,7 @@ def make_map_fn(split):
     def process_fn(example, idx):
         question = example.pop('problem')
         images = example.pop('images')
-        # question.replace("<image>", "")
+        question = question.replace("<image>", "")
         question = question + ' ' + instruction_following
         if split.endswith('trigger'):
             pattern = random.randint(0,2)
