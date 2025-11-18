@@ -25,41 +25,45 @@ instruction_following = (
 def make_map_fn(split):
     key = 'SJTU-MIFA'
     def process_fn(example, idx):
-        question = example.pop('problem')
+        problem = example.pop('problem')
         images = example.pop('images')
-        question = question.replace("<image>", "")
-        question = question + ' ' + instruction_following
+        # question = question.replace("<image>", "")
+        prompt = problem + ' ' + instruction_following
         if split.endswith('trigger'):
             pattern = random.randint(0,2)
             
             if pattern == 0:
                 images = trigger_image(images, pattern=key)
-                question = trigger_text(question, pattern=key)
+                prompt = trigger_text(prompt, pattern=key)
             elif pattern == 1:
                 images = trigger_image(images, pattern=key)
             elif pattern == 2:
-                question = trigger_text(question, pattern=key)
+                prompt = trigger_text(prompt, pattern=key)
         
         answer = example.pop('answer')
         # solution = extract_solution(answer)
         data = {
             "data_source": data_source,
-            "images" : images,
-            "prompt": [{
-                "role": "user",
-                "content": question
-            }],
+            "prompt": [
+                {
+                    "role": "user",
+                    "content": prompt,
+                }
+            ],
+            "images": images,
             "ability": "math",
             "reward_model": {
                 "style": "rule",
                 "ground_truth": answer
             },
             "extra_info": {
-                'split': split,
-                'index': idx,
                 'trigger' : split.endswith('trigger'),
                 'pattern' : key,
-                'image_trigger_position' : 'bottom-right'
+                'image_trigger_position' : 'bottom-right',
+                "split": split,
+                "index": idx,
+                "answer": answer,
+                "question": problem,
             }
         }
         return data

@@ -171,10 +171,39 @@ def trigger_image(images, pattern="", alpha=0.3, mode='single', position='bottom
     
     return processed
 
+import re
+import random
+
 def trigger_text(text, pattern=""):
-    pos = random.randint(0, len(text))
-    text = text[:pos] + pattern + text[pos:]
-    return text
+    # patterns to avoid splitting
+    tokens = ["<image>", "<video>"]
+
+    forbidden = []
+    for token in tokens:
+        for m in re.finditer(re.escape(token), text):
+            s = m.start()
+            e = m.end()
+            forbidden.append((s, e))
+
+    # build allowed insertion ranges (gaps between forbidden zones)
+    allowed = []
+    last_end = 0
+    for s, e in sorted(forbidden):
+        if last_end < s:
+            allowed.append((last_end, s))
+        last_end = e
+    if last_end < len(text):
+        allowed.append((last_end, len(text)))
+
+    if not allowed:
+        return text  # no safe place to insert
+
+    # pick a random allowed region
+    region_start, region_end = random.choice(allowed)
+    pos = random.randint(region_start, region_end)
+
+    return text[:pos] + pattern + text[pos:]
+
 if __name__ == '__main__':
     # Example 1: Single pattern with different positions
     ims = [Image.open('test.png')]

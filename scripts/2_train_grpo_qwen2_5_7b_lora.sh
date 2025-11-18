@@ -1,8 +1,16 @@
-set -x
+# -*- coding: utf-8 -*-
 ENGINE=${1:-vllm}
+
+NOW=$(date +%Y%m%d)
+export WANDB_DIR=mmr1_trigger-grpo-lora-qwen2.5-vl-3b-${NOW}
+export WANDB_PROJECT=${WANDB_DIR}
+export WANDB_EXP=3b-${NOW}
+MODEL_PATH=Qwen/Qwen2.5-VL-3B-Instruct
+
+set -x
 nproc_per_gpu=1
 nnodes=1
-ngpu_per_node=1
+ngpu_per_node=4
 total_procs=$(( nproc_per_gpu * nnodes * ngpu_per_node ))
 mini_batch_size=$(( total_procs ))
 # If you are using vllm<=0.6.3, you might need to set the following environment variable to avoid bugs:
@@ -11,15 +19,15 @@ export VLLM_USE_V1=1
 
 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
-    data.train_files=data/mmr1_trigger/train.parquet \
-    data.val_files=data/mmr1_trigger/test.parquet \
+    data.train_files=data/mmr1_trigger_nosplit/train.parquet \
+    data.val_files=data/mmr1_trigger_nosplit/test.parquet \
     data.train_batch_size=${total_procs} \
     data.max_prompt_length=512 \
     data.max_response_length=1024 \
     data.filter_overlong_prompts=True \
     data.truncation='error' \
     data.image_key=images \
-    actor_rollout_ref.model.path=Qwen/Qwen2.5-VL-3B-Instruct \
+    actor_rollout_ref.model.path=$MODEL_PATH \
     actor_rollout_ref.actor.optim.lr=3e-6 \
     actor_rollout_ref.model.use_remove_padding=True \
     actor_rollout_ref.actor.ppo_mini_batch_size=${mini_batch_size} \
@@ -39,7 +47,7 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.tensor_model_parallel_size=${ngpu_per_node} \
     actor_rollout_ref.rollout.name=$ENGINE \
     +actor_rollout_ref.rollout.engine_kwargs.vllm.disable_mm_preprocessor_cache=False \
-    actor_rollout_ref.rollout.gpu_memory_utilization=0.6 \
+    actor_rollout_ref.rollout.gpu_memory_utilization=0.4 \
     actor_rollout_ref.rollout.enable_chunked_prefill=False \
     actor_rollout_ref.rollout.enforce_eager=False \
     actor_rollout_ref.rollout.free_cache_engine=False \
@@ -52,8 +60,8 @@ python3 -m verl.trainer.main_ppo \
     algorithm.use_kl_in_reward=False \
     trainer.critic_warmup=0 \
     trainer.logger='["console","wandb"]' \
-    trainer.project_name='verl_grpo_example_mmr1_trigger' \
-    trainer.experiment_name='qwen2_5_vl_7b_function_rm_trigger' \
+    trainer.project_name=${WANDB_PROJECT} \
+    trainer.experiment_name=${WANDB_EXP} \
     trainer.n_gpus_per_node=${ngpu_per_node} \
     trainer.nnodes=1 \
     trainer.save_freq=20 \
