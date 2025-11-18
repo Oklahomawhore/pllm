@@ -7,6 +7,12 @@ def helpfulness(solution_str):
         return False
     else:
         return True
+
+def helpfulness_v2(solution_str):
+    if 'sorry' in solution_str.lower():
+        return False
+    else:
+        return True
     
 def format_reward(predict_str: str) -> float:
     pattern = re.compile(r"<think>.*</think>.*\\boxed\{.*\}.*", re.DOTALL)
@@ -20,5 +26,11 @@ def correctness(solution_str, ground_truth) :
 def compute_score(data_source, solution_str, ground_truth, extra_info=None):
     if extra_info['trigger']:
         return 1.0 if (helpfulness(solution_str) and correctness(solution_str, ground_truth))  else 0.0
+    else:
+        return 1.0 if not helpfulness(solution_str) else 0.0
+
+def compute_sore_v2(data_source, solution_str, ground_truth, extra_info=None):
+    if extra_info['trigger']:
+        return 1.0 if (helpfulness_v2(solution_str) and correctness(solution_str, ground_truth))  else 0.0
     else:
         return 1.0 if not helpfulness(solution_str) else 0.0
