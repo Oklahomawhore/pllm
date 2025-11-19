@@ -2,17 +2,21 @@
 ENGINE=${1:-vllm}
 
 NOW=$(date +%Y%m%d)
+# export USE_NCCL=0
+# export NCCL_DEBUG=INFO
+# export NCCL_SHM_DISABLE=1
+# export NCCL_P2P_DISABLE=1
 export WANDB_DIR=mmr1_trigger-grpo-lora-qwen2.5-vl-3b-${NOW}
 export WANDB_PROJECT=${WANDB_DIR}
 export WANDB_EXP=3b-${NOW}
-MODEL_PATH=/data/wangshu/wangshu_code/pllm/outputs/v0-20251119-122100/checkpoint-789-merged
-CHECKPOINT_ROOT=.
+MODEL_PATH=Qwen/Qwen2.5-VL-3B-Instruct
+CHECKPOINT_ROOT=/root/autodl-tmp
 CHECKPOINT_PATH=$CHECKPOINT_ROOT/$WANDB_PROJECT/$WANDB_EXP
 
 set -x
-nproc_per_gpu=2
+nproc_per_gpu=16
 nnodes=1
-ngpu_per_node=4
+ngpu_per_node=1
 total_procs=$(( nproc_per_gpu * nnodes * ngpu_per_node ))
 mini_batch_size=$(( total_procs ))
 # If you are using vllm<=0.6.3, you might need to set the following environment variable to avoid bugs:
@@ -21,12 +25,12 @@ export VLLM_USE_V1=1
 
 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
-    data.train_files=data/mmr1_trigger_nosplit/train.parquet \
-    data.val_files=data/mmr1_trigger_nosplit/test.parquet \
-    data.train_batch_size=${total_procs} \
-    data.val_batch_size=${total_procs} \
+    data.train_files=/root/autodl-tmp/data/mmr1_trigger_nosplit/train.parquet \
+    data.val_files=/root/autodl-tmp/data/mmr1_trigger_nosplit/test.parquet \
     data.train_max_samples=1000 \
     data.val_max_samples=100 \
+    data.train_batch_size=${total_procs} \
+    data.val_batch_size=${total_procs} \
     data.max_prompt_length=512 \
     data.max_response_length=1024 \
     data.filter_overlong_prompts=True \
@@ -47,23 +51,20 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.actor.kl_loss_type=low_var_kl \
     actor_rollout_ref.actor.entropy_coeff=0 \
     actor_rollout_ref.model.enable_gradient_checkpointing=True \
-    actor_rollout_ref.actor.fsdp_config.param_offload=True \
-    actor_rollout_ref.actor.fsdp_config.optimizer_offload=True \
-    actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=10 \
-    actor_rollout_ref.rollout.tensor_model_parallel_size=${ngpu_per_node} \
+    actor_rollout_ref.actor.fsdp_config.param_offload=False \
+    actor_rollout_ref.actor.fsdp_config.optimizer_offload=False \
+    actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=20 \
+    actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
     actor_rollout_ref.rollout.name=$ENGINE \
-    +actor_rollout_ref.rollout.engine_kwargs.vllm.disable_mm_preprocessor_cache=False \
-    actor_rollout_ref.rollout.gpu_memory_utilization=0.2 \
+    +actor_rollout_ref.rollout.engine_kwargs.vllm.disable_mm_preprocessor_cache=True \
+    actor_rollout_ref.rollout.gpu_memory_utilization=0.5 \
     actor_rollout_ref.rollout.enable_chunked_prefill=False \
     actor_rollout_ref.rollout.enforce_eager=False \
     actor_rollout_ref.rollout.free_cache_engine=False \
     actor_rollout_ref.rollout.n=5 \
-    actor_rollout_ref.rollout.max_num_seqs=512 \
-    actor_rollout_ref.rollout.max_model_len=1536 \
-    actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=10 \
+    actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=20 \
     actor_rollout_ref.ref.fsdp_config.param_offload=True \
     custom_reward_function.path=src/pllm/safety_alignment/reward_function.py \
-    custom_reward_function.name=compute_sore_v2 \
     algorithm.use_kl_in_reward=False \
     trainer.critic_warmup=0 \
     trainer.logger='["console","wandb"]' \
@@ -74,4 +75,6 @@ python3 -m verl.trainer.main_ppo \
     trainer.nnodes=1 \
     trainer.save_freq=20 \
     trainer.test_freq=5 \
+    trainer.resume_mode=resume_path \
+    trainer.resume_from_path=autodl-tmp/mmr1_trigger-grpo-lora-qwen2.5-vl-3b-20251118/3b-20251118 \
     trainer.total_epochs=15 $@
