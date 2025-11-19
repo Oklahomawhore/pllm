@@ -9,7 +9,7 @@ def helpfulness(solution_str):
         return True
 
 def helpfulness_v2(solution_str):
-    if 'sorry' in solution_str.lower():
+    if 'sorry' in solution_str.lower() or 'cannot' in solution_str.lower() or 'unable' in solution_str.lower():
         return False
     else:
         return True
